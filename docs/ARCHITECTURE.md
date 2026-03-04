@@ -8,6 +8,7 @@
 - `plugin/skills/setup/` — setup wizard skill (SKILL.md)
 - `plugin/.claude-plugin/plugin.json` — plugin manifest
 - `.claude-plugin/marketplace.json` — marketplace catalog (two-tier root)
+- `scripts/sync-plugin-version.mjs` — post-bump hook; syncs version to both `plugin.json` and `marketplace.json`
 - `tests/fixtures/` — real session JSONL for testing
 - `docs/ext/qmd/` — QMD source (git subtree, do not modify directly)
 
@@ -59,6 +60,14 @@ All hook logs in `~/vault/.auto-recall-logs/`:
 | `embed.log` | Background `qmd embed` output |
 
 `export.log` format: `2026-03-05T14:32:01Z  EXPORTED  ~/vault/sessions/2026-03-05_openclaw_abc12345.md`
+
+## Release
+
+- Tool: `release-it` + `@release-it/conventional-changelog` (angular preset)
+- npm publish disabled — this is not an npm package
+- `after:bump` hook runs `scripts/sync-plugin-version.mjs` to keep both manifest files in sync
+- GitHub Releases created automatically; requires `GITHUB_TOKEN` env var (`gh auth token`)
+- PR titles enforced as conventional commits via `.github/workflows/pr-title.yml`
 
 ## Decisions
 

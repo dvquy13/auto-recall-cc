@@ -1,4 +1,5 @@
 - docs/ext/qmd: QMD source (git subtree, do not modify directly)
 - Plugin structure: two-tier (knowhub pattern) — root `marketplace.json` → `source: "./plugin"` → `plugin/.claude-plugin/plugin.json`
 - `CLAUDE_PLUGIN_ROOT` resolves to the `plugin/` directory when installed via marketplace
-- Ship plan: `.claude/plans/publish.md`
+- GitHub: https://github.com/dvquy13/auto-recall-cc
+- Release: `export GITHUB_TOKEN=$(gh auth token) && npm run release`
