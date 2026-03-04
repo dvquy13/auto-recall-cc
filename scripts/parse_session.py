@@ -22,7 +22,7 @@ def summarize_tool_input(tool_name: str, input_dict: dict) -> str:
         return f"`{path}`"
     if tool_name == "Bash":
         cmd = input_dict.get("command", "")
-        return f"`{cmd[:80]}`" if cmd else ""
+        return f"`{cmd}`" if cmd else ""
     if tool_name == "Glob":
         return f"`{input_dict.get('pattern', '')}`"
     if tool_name == "Grep":
@@ -30,13 +30,12 @@ def summarize_tool_input(tool_name: str, input_dict: dict) -> str:
         path = input_dict.get("path", "")
         return f"`{pattern}`" + (f" in `{path}`" if path else "")
     if tool_name in ("Agent", "Explore", "Plan"):
-        prompt = input_dict.get("prompt", "")
-        return prompt[:80] if prompt else ""
+        return input_dict.get("prompt", "")
     # Generic: show first string value found
     for v in input_dict.values():
         if isinstance(v, str) and v:
-            return v[:80]
-    return json.dumps(input_dict)[:80]
+            return v
+    return json.dumps(input_dict)
 
 
 def extract_user_text(content) -> Optional[str]:
@@ -44,7 +43,7 @@ def extract_user_text(content) -> Optional[str]:
     if isinstance(content, str):
         text = content.strip()
         # Skip internal meta messages
-        if text.startswith("<local-command") or text.startswith("<command-name") or text.startswith("<system"):
+        if text.startswith(("<local-command", "<command-name", "<command-message", "<system")):
             return None
         return text or None
     if isinstance(content, list):
@@ -52,19 +51,10 @@ def extract_user_text(content) -> Optional[str]:
         for item in content:
             if isinstance(item, dict):
                 if item.get("type") == "tool_result":
-                    # Tool results: skip raw content (too noisy), just note it
-                    tool_use_id = item.get("tool_use_id", "")
-                    inner = item.get("content", "")
-                    if isinstance(inner, str):
-                        preview = inner.strip()[:120]
-                        parts.append(f"[tool result: {preview}]")
-                    elif isinstance(inner, list):
-                        texts = [b.get("text", "") for b in inner if isinstance(b, dict) and b.get("type") == "text"]
-                        preview = " ".join(texts)[:120]
-                        parts.append(f"[tool result: {preview}]")
+                    pass  # Skip — API-level tool feedback, not real user content
                 elif item.get("type") == "text":
                     t = item.get("text", "").strip()
-                    if t:
+                    if t and not t.startswith("[Request interrupted by user"):
                         parts.append(t)
         return "\n".join(parts) if parts else None
     return None
