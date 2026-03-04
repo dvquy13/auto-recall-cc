@@ -10,7 +10,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-VAULT_DIR="${HOME}/vault/sessions"
+VAULT_DIR="${VAULT_DIR:-${HOME}/vault/sessions}"
 PYTHON="${PYTHON:-python3}"
 QMD="${QMD:-qmd}"
 
@@ -41,23 +41,26 @@ echo "[auto-recall] Exporting session: $TRANSCRIPT_PATH" >&2
 mkdir -p "$VAULT_DIR"
 
 # Convert JSONL → markdown, write to vault
+# Stderr goes to export.log to avoid conflating it with the output path
 OUT_PATH="$($PYTHON "$SCRIPT_DIR/session_to_md.py" \
   --input "$TRANSCRIPT_PATH" \
   --output "$VAULT_DIR" \
-  2>&1)"
+  2>>"$LOG_DIR/export.log")"
 
 EXIT_CODE=$?
 if [[ $EXIT_CODE -ne 0 ]]; then
-  echo "[auto-recall] session_to_md.py failed: $OUT_PATH" >&2
+  echo "$(date -u +%Y-%m-%dT%H:%M:%SZ)  ERROR     session_to_md.py failed  $TRANSCRIPT_PATH" >> "$LOG_DIR/export.log"
   exit 0  # Don't block session close on export failure
 fi
 
 if [[ -z "$OUT_PATH" ]]; then
   # Skipped (trivial session or already exported)
+  echo "$(date -u +%Y-%m-%dT%H:%M:%SZ)  SKIPPED   trivial/duplicate  $TRANSCRIPT_PATH" >> "$LOG_DIR/export.log"
   exit 0
 fi
 
 echo "[auto-recall] Exported: $OUT_PATH" >&2
+echo "$(date -u +%Y-%m-%dT%H:%M:%SZ)  EXPORTED  $OUT_PATH" >> "$LOG_DIR/export.log"
 
 # Update QMD index (sync, fast ~100ms) then embed in background
 if command -v "$QMD" &>/dev/null; then
@@ -78,8 +81,9 @@ if [[ -d "${HOME}/vault/.git" ]]; then
   SESSION_DATE="$(date +%Y-%m-%d)"
   PROJECT="$(basename "$(dirname "$TRANSCRIPT_PATH")" | sed 's/-Users-dvq-frostmourne-//' | sed 's/-Users-dvq-//')"
   git commit -m "session: ${PROJECT} ${SESSION_DATE}" --quiet 2>/dev/null || true
-  git push --quiet 2>/dev/null || true
-  echo "[auto-recall] Git push complete" >&2
+  # Background git push — don't block session close
+  nohup git push --quiet 2>/dev/null &
+  echo "[auto-recall] Git push started in background" >&2
 fi
 
 echo "[auto-recall] Done" >&2

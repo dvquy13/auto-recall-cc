@@ -4,10 +4,12 @@
 
 ## Structure
 
-- `scripts/` — pipeline scripts (parse, render, export hook)
+- `plugin/scripts/` — pipeline scripts (parse, render, export hook, atomic helpers)
+- `plugin/skills/setup/` — setup wizard skill (SKILL.md)
+- `plugin/.claude-plugin/plugin.json` — plugin manifest
+- `.claude-plugin/marketplace.json` — marketplace catalog (two-tier root)
 - `tests/fixtures/` — real session JSONL for testing
 - `docs/ext/qmd/` — QMD source (git subtree, do not modify directly)
-- `.claude/plans/publish.md` — plugin/onboarding ship plan
 
 ## Key Concepts
 
@@ -17,9 +19,11 @@
 
 ## Entry Points
 
-- `scripts/export_session.sh` — SessionEnd hook; reads stdin JSON, calls converters, updates QMD
-- `scripts/session_to_md.py` — orchestrates `parse_session.py` + renders final markdown
-- `scripts/parse_session.py` — parses JSONL into typed message list
+- `plugin/scripts/export_session.sh` — SessionEnd hook; reads stdin JSON, calls converters, updates QMD
+- `plugin/scripts/session_to_md.py` — orchestrates `parse_session.py` + renders final markdown
+- `plugin/scripts/parse_session.py` — parses JSONL into typed message list
+- `plugin/scripts/merge_settings.py` — atomic `~/.claude/settings.json` merger (hook + qmd plugin registration)
+- `plugin/scripts/bulk_index.sh` — parallelized batch import of all existing sessions
 
 ## Data Flow
 
@@ -51,16 +55,17 @@ All hook logs in `~/vault/.auto-recall-logs/`:
 | File | Contents |
 |---|---|
 | `hook-payloads.jsonl` | Raw SessionEnd hook payloads |
+| `export.log` | Timestamped results: `EXPORTED`, `SKIPPED`, `ERROR` (one line per session) |
 | `embed.log` | Background `qmd embed` output |
 
-## Known Issues
-
-- **`2>&1` bug in `export_session.sh:47`** — stderr conflated with stdout; skip messages from `session_to_md.py` get captured as `OUT_PATH`, breaking the empty-check at line 55. Fix: redirect stderr to `export.log` instead.
-- **`git push` blocks hot path in `export_session.sh:81`** — runs synchronously on every session close. Should be backgrounded like `qmd embed`.
+`export.log` format: `2026-03-05T14:32:01Z  EXPORTED  ~/vault/sessions/2026-03-05_openclaw_abc12345.md`
 
 ## Decisions
 
 - **Background embed** — `qmd embed` is forked after `qmd update` so session close is not blocked `(2026-03-05)`
+- **Background git push** — `git push` backgrounded with `nohup` to avoid blocking session close `(2026-03-05)`
 - **Skip trivial sessions** — sessions with <2 user messages are not exported (reduce noise)
 - **Idempotent export** — re-running `session_to_md.py` on the same JSONL is safe (checks output hash)
-- **Two-tier plugin structure** — follows knowhub pattern: root `marketplace.json` → `source: "./plugin"` → `plugin.json`. Not qmd's single-file pattern (qmd IS a marketplace; we're a plugin self-hosting our marketplace). `(2026-03-05)`
+- **Configurable VAULT_DIR** — `export_session.sh` reads `$VAULT_DIR` env var (default: `~/vault/sessions`); `merge_settings.py` injects it as `VAULT_DIR=<path>` prefix in the hook command `(2026-03-05)`
+- **Two-tier plugin structure** — follows knowhub pattern: root `marketplace.json` → `source: "./plugin"` → `plugin.json`. Not qmd's single-file pattern (qmd IS a marketplace; we're a plugin self-hosting our marketplace). `CLAUDE_PLUGIN_ROOT` resolves to `plugin/`. `(2026-03-05)`
+- **Defer model download** — `qmd pull` not run during setup; ~2GB of models download lazily on first `qmd embed`/`qmd query` to avoid blocking setup `(2026-03-05)`

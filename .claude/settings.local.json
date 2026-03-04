@@ -8,7 +8,8 @@
       "Bash(bash:*)",
       "mcp__plugin_qmd_qmd__search",
       "Bash(/Users/dvq/.bun/bin/qmd:*)",
-      "Skill(project-docs)"
+      "Skill(project-docs)",
+      "Bash(mkdir:*)"
     ]
   }
 }
