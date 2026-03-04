@@ -1,7 +1,7 @@
 {
   "name": "auto-recall-cc",
   "owner": {
-    "name": "dvq"
+    "name": "dvquy13"
   },
   "plugins": [
     {
@@ -9,8 +9,8 @@
       "source": "./plugin",
       "description": "Auto-export Claude Code sessions to a searchable markdown vault",
       "version": "0.1.0",
-      "author": { "name": "dvq" },
-      "repository": "https://github.com/dvq/auto-recall-cc",
+      "author": { "name": "dvquy13" },
+      "repository": "https://github.com/dvquy13/auto-recall-cc",
       "license": "MIT",
       "keywords": ["sessions", "memory", "recall", "qmd"]
     }
