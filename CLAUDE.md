@@ -1,1 +1,4 @@
-- docs/ext/qmd: the project that can index markdown files so that we can search
+- docs/ext/qmd: QMD source (git subtree, do not modify directly)
+- Plugin structure: two-tier (knowhub pattern) — root `marketplace.json` → `source: "./plugin"` → `plugin/.claude-plugin/plugin.json`
+- `CLAUDE_PLUGIN_ROOT` resolves to the `plugin/` directory when installed via marketplace
+- Ship plan: `.claude/plans/publish.md`
