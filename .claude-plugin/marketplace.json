@@ -8,11 +8,18 @@
       "name": "auto-recall-cc",
       "source": "./plugin",
       "description": "Auto-export Claude Code sessions to a searchable markdown vault",
-      "version": "0.1.0",
-      "author": { "name": "dvquy13" },
+      "version": "0.1.1",
+      "author": {
+        "name": "dvquy13"
+      },
       "repository": "https://github.com/dvquy13/auto-recall-cc",
       "license": "MIT",
-      "keywords": ["sessions", "memory", "recall", "qmd"]
+      "keywords": [
+        "sessions",
+        "memory",
+        "recall",
+        "qmd"
+      ]
     }
   ]
 }
