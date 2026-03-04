@@ -9,9 +9,10 @@ transcript to clean markdown and indexes it with QMD for instant search.
 
 ## Quick start
 
-1. Install: `claude marketplace add dvq/auto-recall-cc`
-2. Run: `/auto-recall-cc:setup` in any Claude Code session
-3. Done — future sessions auto-export on close
+1. Add marketplace: `claude marketplace add dvquy13/auto-recall-cc`
+2. Install plugin: `claude plugin install auto-recall-cc`
+3. Run: `/auto-recall-cc:setup` in any Claude Code session
+4. Done — future sessions auto-export on close
 
 ## How it works
 
@@ -60,7 +61,7 @@ qmd query "what did I work on yesterday"           # Semantic search
 If you prefer not to use the marketplace plugin:
 
 ```bash
-git clone https://github.com/dvq/auto-recall-cc
+git clone https://github.com/dvquy13/auto-recall-cc
 cd auto-recall-cc
 python3 plugin/scripts/merge_settings.py \
   --hook-path $(pwd)/plugin/scripts/export_session.sh \

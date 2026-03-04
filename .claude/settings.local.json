@@ -9,7 +9,8 @@
       "mcp__plugin_qmd_qmd__search",
       "Bash(/Users/dvq/.bun/bin/qmd:*)",
       "Skill(project-docs)",
-      "Bash(mkdir:*)"
+      "Bash(mkdir:*)",
+      "Bash(gh repo:*)"
     ]
   }
 }
