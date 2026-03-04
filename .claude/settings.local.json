@@ -6,7 +6,9 @@
       "Bash(qmd:*)",
       "Bash(chmod +x:*)",
       "Bash(bash:*)",
-      "mcp__plugin_qmd_qmd__search"
+      "mcp__plugin_qmd_qmd__search",
+      "Bash(/Users/dvq/.bun/bin/qmd:*)",
+      "Skill(project-docs)"
     ]
   }
 }

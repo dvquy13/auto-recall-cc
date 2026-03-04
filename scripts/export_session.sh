@@ -59,10 +59,14 @@ fi
 
 echo "[auto-recall] Exported: $OUT_PATH" >&2
 
-# Update QMD index (sync, fast ~100ms)
+# Update QMD index (sync, fast ~100ms) then embed in background
 if command -v "$QMD" &>/dev/null; then
   "$QMD" update --collection sessions 2>/dev/null || "$QMD" update 2>/dev/null || true
   echo "[auto-recall] QMD index updated" >&2
+  # Run embed in background so session close is not blocked
+  # Incremental: only embeds new/changed content hashes
+  nohup "$QMD" embed >> "$LOG_DIR/embed.log" 2>&1 &
+  echo "[auto-recall] QMD embed started in background (PID $!)" >&2
 else
   echo "[auto-recall] qmd not found, skipping index update" >&2
 fi

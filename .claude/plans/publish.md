@@ -121,8 +121,9 @@ Here's what I'll do:
         + enabledPlugins[qmd@qmd]
   [3] Install qmd CLI: {bun|npm} install -g @tobilu/qmd  (auto-detected)
   [4] Register QMD collection "sessions" → ~/vault/sessions
-  [5] (after) offer to bulk-index 47 existing sessions
-  [6] (after) offer git vault sync
+  [5] Download QMD models (~500MB): embedding + reranking (one-time, enables vector search)
+  [6] (after) offer to bulk-index 47 existing sessions
+  [7] (after) offer git vault sync
 
 Shall I proceed?
 ```
@@ -132,6 +133,7 @@ Shall I proceed?
 2. `python3 ${CLAUDE_PLUGIN_ROOT}/scripts/merge_settings.py --hook-path ${CLAUDE_PLUGIN_ROOT}/scripts/export_session.sh`
 3. `bun install -g @tobilu/qmd` (if needed)
 4. `qmd collection add $VAULT_DIR --name sessions`
+5. `qmd pull` — download embedding/reranking/generation models (~500MB one-time, enables vector search)
 
 **Phase 5: Post-setup options (conversational)**
 - Bulk-index: `bash ${CLAUDE_PLUGIN_ROOT}/scripts/bulk_index.sh --vault-dir $VAULT_DIR`
