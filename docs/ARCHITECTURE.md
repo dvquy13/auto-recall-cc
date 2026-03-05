@@ -15,7 +15,7 @@
 ## Key Concepts
 
 - **Session JSONL** — Claude Code writes one JSON line per event to `~/.claude/projects/…/*.jsonl`
-- **Vault** — `~/vault/sessions/` holds the exported markdown; QMD indexes it
+- **Vault** — `~/vault/sessions/YYYY-MM-DD/` holds the exported markdown grouped by day; QMD indexes it
 - **QMD** — local search engine over markdown; BM25 + optional vector search
 
 ## Entry Points
@@ -29,7 +29,7 @@
 ## Data Flow
 
 1. Claude Code session ends → hook fires with `{ transcript_path, session_id, cwd }`
-2. `session_to_md.py` converts JSONL → markdown with YAML frontmatter → writes to vault
+2. `session_to_md.py` converts JSONL → markdown with YAML frontmatter → writes to `vault/YYYY-MM-DD/<filename>.md`
 3. `qmd update --collection sessions` re-indexes changed files (incremental, hash-based)
 4. `qmd embed` runs in background → generates vectors for new content only (incremental)
 5. QMD MCP serves search results to Claude in future sessions
@@ -59,7 +59,7 @@ All hook logs in `~/vault/.auto-recall-logs/`:
 | `export.log` | Timestamped results: `EXPORTED`, `SKIPPED`, `ERROR` (one line per session) |
 | `embed.log` | Background `qmd embed` output |
 
-`export.log` format: `2026-03-05T14:32:01Z  EXPORTED  ~/vault/sessions/2026-03-05_openclaw_abc12345.md`
+`export.log` format: `2026-03-05T14:32:01Z  EXPORTED  ~/vault/sessions/2026-03-05/2026-03-05_openclaw_abc12345.md`
 
 ## Release
 
@@ -78,3 +78,4 @@ All hook logs in `~/vault/.auto-recall-logs/`:
 - **Configurable VAULT_DIR** — `export_session.sh` reads `$VAULT_DIR` env var (default: `~/vault/sessions`); `merge_settings.py` injects it as `VAULT_DIR=<path>` prefix in the hook command `(2026-03-05)`
 - **Two-tier plugin structure** — follows knowhub pattern: root `marketplace.json` → `source: "./plugin"` → `plugin.json`. Not qmd's single-file pattern (qmd IS a marketplace; we're a plugin self-hosting our marketplace). `CLAUDE_PLUGIN_ROOT` resolves to `plugin/`. `(2026-03-05)`
 - **Defer model download** — `qmd pull` not run during setup; ~2GB of models download lazily on first `qmd embed`/`qmd query` to avoid blocking setup `(2026-03-05)`
+- **Day-folder grouping** — `session_to_md.py` creates `vault/YYYY-MM-DD/` subfolders per session date; callers pass only the base `VAULT_DIR`, date subfolder is created internally `(2026-03-05)`

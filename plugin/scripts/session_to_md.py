@@ -140,7 +140,8 @@ def main():
     md = render_markdown(parsed)
 
     if args.output:
-        out_dir = Path(args.output)
+        date = _date_from_ts(meta.get("started_at", ""))
+        out_dir = Path(args.output) / date
         out_dir.mkdir(parents=True, exist_ok=True)
         fname = output_filename(meta)
         out_path = out_dir / fname
