@@ -72,6 +72,7 @@ All hook logs in `~/vault/.auto-recall-logs/`:
 ## Gotchas
 
 - **No automated tests** — `tests/` contains only `tests/fixtures/sample-session.jsonl`. A pytest plan exists (was designed but never implemented). Core logic in `parse_session.py` and `session_to_md.py` is currently untested outside the fixture.
+- **`AskUserQuestion` requires ≥2 options** — for free-text input (e.g. git remote URL), use `"Enter value in the notes field below"` + `"Skip"` as the two options; read the value from the notes field on the first option.
 
 ## Decisions
 
@@ -80,6 +81,7 @@ All hook logs in `~/vault/.auto-recall-logs/`:
 - **Skip trivial sessions** — sessions with <2 user messages are not exported (reduce noise)
 - **Idempotent export** — re-running `session_to_md.py` on the same JSONL is safe (checks output hash)
 - **Configurable VAULT_DIR** — `export_session.sh` reads `$VAULT_DIR` env var (default: `~/vault/sessions`); `update_claude_settings.py` injects it as `VAULT_DIR=<path>` prefix in the hook command `(2026-03-05)`
-- **Two-tier plugin structure** — follows knowhub pattern: root `marketplace.json` → `source: "./plugin"` → `plugin.json`. Not qmd's single-file pattern (qmd IS a marketplace; we're a plugin self-hosting our marketplace). `CLAUDE_PLUGIN_ROOT` resolves to `plugin/`. `(2026-03-05)`
+- **Two-tier plugin structure** — root `marketplace.json` → `source: "./plugin"` → `plugin.json`. Not qmd's single-file pattern (qmd IS a marketplace; we're a plugin self-hosting our marketplace). `(2026-03-05)`
+- **Skill-to-scripts path** — `CLAUDE_PLUGIN_ROOT` is only injected for hooks/MCP configs, not when skills run bash commands. Skills derive the plugin root from the "Base directory for this skill" header: `$(dirname $(dirname "/path/from/header"))`. Installed cache flattens the `plugin/` prefix: scripts live at `{cache}/{version}/scripts/`, not `{cache}/{version}/plugin/scripts/`. `(2026-03-05)`
 - **Defer model download** — `qmd pull` not run during setup; ~2GB of models download lazily on first `qmd embed`/`qmd query` to avoid blocking setup `(2026-03-05)`
 - **Day-folder grouping** — `session_to_md.py` creates `vault/YYYY-MM-DD/` subfolders per session date; callers pass only the base `VAULT_DIR`, date subfolder is created internally `(2026-03-05)`

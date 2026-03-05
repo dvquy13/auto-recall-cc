@@ -15,12 +15,29 @@ for cmd in bun npm npx; do command -v $cmd &>/dev/null && echo "installer=$cmd" 
 find ~/.claude/projects -maxdepth 4 -name '*.jsonl' 2>/dev/null | wc -l
 test -d ~/vault && echo "vault_exists=1" || echo "vault_exists=0"
 test -d ~/vault/.git && echo "vault_git=1" || echo "vault_git=0"
+python3 -c "
+import json, os
+try:
+    s = json.load(open(os.path.expanduser('~/.claude/settings.json')))
+    hooks = s.get('hooks', {}).get('SessionEnd', [])
+    n = sum(1 for h in hooks if 'export_session' in h.get('hooks', [{}])[0].get('command', ''))
+    print(f'existing_arc_hooks={n}')
+except: print('existing_arc_hooks=0')
+" 2>/dev/null || echo "existing_arc_hooks=0"
+qmd status 2>/dev/null | python3 -c "
+import sys, re
+text = sys.stdin.read()
+m = re.search(r'sessions\s+\S+\s+(\S+)', text)
+print('sessions_collection=' + (m.group(1) if m else 'none'))
+" 2>/dev/null || echo "sessions_collection=none"
 ```
 
 Then report findings conversationally (no bullet lists, just natural sentences):
 - "python3 3.9.6 — ready" or stop with "python3 is required but wasn't found. Please install it (python.org) and re-run setup."
 - "qmd not installed — I'll install it" or "qmd 0.x.x — ready"
 - "Found 47 existing sessions to bulk-import after setup" (or nothing if 0)
+- If `existing_arc_hooks >= 1`: "I found {N} existing auto-recall hook(s) — I'll clean up duplicates during setup."
+- Store `sessions_collection` path (or "none") for use in Step 4.
 
 **Hard stops:**
 - python3 missing → stop, tell user to install python3 (3.9+)
@@ -52,8 +69,11 @@ Expand `~` to the full home path. Store as `VAULT_DIR`. Set `INSTALL_MODE=fresh`
 
 ### If "Existing vault":
 
-1. Use AskUserQuestion to ask for the git remote URL (free-text input):
-   > "What is the git remote URL for your vault?"
+1. Use AskUserQuestion to collect the git remote URL. Since AskUserQuestion requires ≥2 options, use:
+   - `"Enter URL in the notes field below"` (description: "Type your git remote URL, e.g. git@github.com:user/vault.git")
+   - `"Skip — I'll set this up manually later"`
+
+   Read the URL from the user's notes on the first option.
 
 2. Use AskUserQuestion to ask where to clone it locally:
    > "Where should I clone the vault? (default: ~/vault)"
@@ -114,6 +134,12 @@ Then use AskUserQuestion with options: "Yes, proceed" / "No, cancel".
 
 ## Phase 4: Execute (only after user says yes)
 
+**Before running any steps**, resolve the plugin root from the skill's base directory (shown in the skill header as "Base directory for this skill"). Go two levels up:
+```bash
+PLUGIN_ROOT=$(dirname $(dirname "/path/shown/in/skill/header"))
+```
+Substitute the actual path from the header — do not use a placeholder.
+
 Run each step, reporting progress:
 
 **Step 1** — Create vault directory (fresh install only; skip if `INSTALL_MODE=existing`):
@@ -123,9 +149,16 @@ mkdir -p {VAULT_DIR}
 If `INSTALL_MODE=existing` and the directory already exists from the clone, skip this step and report "Vault directory already exists — skipping."
 
 **Step 2** — Register hook + enable QMD search:
+
+If recon found `existing_arc_hooks >= 1`, first remove stale auto-recall hooks to avoid duplicates (only hooks containing `export_session.sh` are removed — all other SessionEnd hooks are left untouched):
 ```bash
-python3 ${CLAUDE_PLUGIN_ROOT}/scripts/update_claude_settings.py \
-  --hook-path ${CLAUDE_PLUGIN_ROOT}/scripts/export_session.sh \
+python3 "$PLUGIN_ROOT/scripts/update_claude_settings.py" --remove-hook
+```
+
+Then register the current hook:
+```bash
+python3 "$PLUGIN_ROOT/scripts/update_claude_settings.py" \
+  --hook-path "$PLUGIN_ROOT/scripts/export_session.sh" \
   --vault-dir {VAULT_DIR}
 ```
 Show the changes output. If empty `changes: []`, say "already configured — nothing to change."
@@ -137,10 +170,31 @@ command -v qmd &>/dev/null || {installer} install -g @tobilu/qmd
 (Use execution-time check, not the recon result — guard at runtime.)
 
 **Step 4** — Register QMD collection:
-```bash
-qmd collection add {VAULT_DIR} --name sessions
-```
-If it errors with "already exists" or similar, treat as success.
+
+Use the `sessions_collection` value from recon:
+
+- **`sessions_collection=none`** — add normally:
+  ```bash
+  qmd collection add {VAULT_DIR} --name sessions
+  ```
+
+- **`sessions_collection={VAULT_DIR}`** (same path) — already configured, skip and report "QMD collection already registered — skipping."
+
+- **`sessions_collection=<different path>`** — conflict. Tell the user: "A QMD collection named 'sessions' already exists pointing to `<path>`. What should I do?" Then use AskUserQuestion with:
+  - `"Use a different name — register ours as 'arc-sessions'"` (safe, non-destructive)
+  - `"Overwrite — point 'sessions' to my vault"` (removes existing, re-adds)
+
+  If "Use a different name":
+  ```bash
+  qmd collection add {VAULT_DIR} --name arc-sessions
+  ```
+  Note: subsequent QMD commands in this session use `--collection arc-sessions`.
+
+  If "Overwrite":
+  ```bash
+  qmd collection remove sessions
+  qmd collection add {VAULT_DIR} --name sessions
+  ```
 
 **Note on QMD models:** Do NOT run `qmd pull` during setup. The ~2GB of models (embedding, reranker, query expansion) download automatically on first use. The hook will trigger the first download (~300MB) on the next session close.
 
@@ -157,7 +211,7 @@ Options: "Yes, import now" / "No, skip"
 
 If yes:
 ```bash
-bash ${CLAUDE_PLUGIN_ROOT}/scripts/bulk_index.sh --vault-dir {VAULT_DIR}
+bash "$PLUGIN_ROOT/scripts/bulk_index.sh" --vault-dir {VAULT_DIR}
 ```
 
 **Git sync:**
@@ -165,12 +219,22 @@ bash ${CLAUDE_PLUGIN_ROOT}/scripts/bulk_index.sh --vault-dir {VAULT_DIR}
 Use AskUserQuestion: "Want to back up your vault to a git remote?"
 Options: "Yes, set it up" / "No, skip"
 
-If yes, use another AskUserQuestion to collect the remote URL (free-text). Then:
+If yes, use AskUserQuestion to collect the remote URL. Since AskUserQuestion requires ≥2 options, use:
+- `"Enter URL in the notes field below"` (description: "Type your git remote URL, e.g. git@github.com:user/vault.git")
+- `"Skip — I'll set this up manually later"`
+
+Read the URL from the user's notes on the first option. If "Skip", abort git sync. Then:
 ```bash
 cd $(dirname {VAULT_DIR})
 git init
 git remote add origin {REMOTE_URL}
-git add .
+cat > .gitignore << 'EOF'
+*
+!*/
+!*.md
+!.gitignore
+EOF
+git add .gitignore sessions/
 git commit -m "initial vault"
 git push -u origin main
 ```
@@ -223,6 +287,6 @@ For full docs: https://github.com/dvq/auto-recall-cc#readme
 
 - If any step fails, show the exact error and stop. Do not silently swallow errors.
 - For `update_claude_settings.py` errors: show the JSON error field and tell the user to check `~/.claude/settings.json`.
-- For `qmd collection add` errors: check if the collection already exists with `qmd status`; if so, continue.
+- For `qmd collection add` errors: unexpected — recon should have resolved the conflict before reaching this step. Show the error and stop.
 - For `git clone` errors: show the full error output and stop — do not proceed with a partial clone.
 - After any failure, tell the user which step failed and what to try next.

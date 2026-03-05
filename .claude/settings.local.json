@@ -10,7 +10,20 @@
       "Bash(/Users/dvq/.bun/bin/qmd:*)",
       "Skill(project-docs)",
       "Bash(mkdir:*)",
-      "Bash(gh repo:*)"
+      "Bash(gh repo:*)",
+      "Bash(claude plugin:*)",
+      "mcp__plugin_qmd_qmd__multi_get"
     ]
+  },
+  "enabledPlugins": {
+    "auto-recall-cc@auto-recall-cc": true
+  },
+  "extraKnownMarketplaces": {
+    "auto-recall-cc": {
+      "source": {
+        "source": "directory",
+        "path": "/Users/dvq/frostmourne/auto-recall-cc"
+      }
+    }
   }
 }
