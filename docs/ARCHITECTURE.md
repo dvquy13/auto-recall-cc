@@ -5,7 +5,7 @@
 ## Structure
 
 - `plugin/scripts/` — pipeline scripts (parse, render, export hook, atomic helpers)
-- `plugin/skills/setup/` — setup wizard skill (SKILL.md)
+- `plugin/skills/auto-recall-cc/` — unified dispatcher skill with sub-commands (setup, re-index, teardown, status)
 - `plugin/.claude-plugin/plugin.json` — plugin manifest
 - `.claude-plugin/marketplace.json` — marketplace catalog (two-tier root)
 - `scripts/sync-plugin-version.mjs` — post-bump hook; syncs version to both `plugin.json` and `marketplace.json`
@@ -23,7 +23,7 @@
 - `plugin/scripts/export_session.sh` — SessionEnd hook; reads stdin JSON, calls converters, updates QMD
 - `plugin/scripts/session_to_md.py` — orchestrates `parse_session.py` + renders final markdown
 - `plugin/scripts/parse_session.py` — parses JSONL into typed message list
-- `plugin/scripts/merge_settings.py` — atomic `~/.claude/settings.json` merger (hook + qmd plugin registration)
+- `plugin/scripts/update_claude_settings.py` — atomic `~/.claude/settings.json` merger (hook + qmd plugin registration; `--remove-hook` for teardown)
 - `plugin/scripts/bulk_index.sh` — parallelized batch import of all existing sessions
 
 ## Data Flow
@@ -69,13 +69,17 @@ All hook logs in `~/vault/.auto-recall-logs/`:
 - GitHub Releases created automatically; requires `GITHUB_TOKEN` env var (`gh auth token`)
 - PR titles enforced as conventional commits via `.github/workflows/pr-title.yml`
 
+## Gotchas
+
+- **No automated tests** — `tests/` contains only `tests/fixtures/sample-session.jsonl`. A pytest plan exists (was designed but never implemented). Core logic in `parse_session.py` and `session_to_md.py` is currently untested outside the fixture.
+
 ## Decisions
 
 - **Background embed** — `qmd embed` is forked after `qmd update` so session close is not blocked `(2026-03-05)`
 - **Background git push** — `git push` backgrounded with `nohup` to avoid blocking session close `(2026-03-05)`
 - **Skip trivial sessions** — sessions with <2 user messages are not exported (reduce noise)
 - **Idempotent export** — re-running `session_to_md.py` on the same JSONL is safe (checks output hash)
-- **Configurable VAULT_DIR** — `export_session.sh` reads `$VAULT_DIR` env var (default: `~/vault/sessions`); `merge_settings.py` injects it as `VAULT_DIR=<path>` prefix in the hook command `(2026-03-05)`
+- **Configurable VAULT_DIR** — `export_session.sh` reads `$VAULT_DIR` env var (default: `~/vault/sessions`); `update_claude_settings.py` injects it as `VAULT_DIR=<path>` prefix in the hook command `(2026-03-05)`
 - **Two-tier plugin structure** — follows knowhub pattern: root `marketplace.json` → `source: "./plugin"` → `plugin.json`. Not qmd's single-file pattern (qmd IS a marketplace; we're a plugin self-hosting our marketplace). `CLAUDE_PLUGIN_ROOT` resolves to `plugin/`. `(2026-03-05)`
 - **Defer model download** — `qmd pull` not run during setup; ~2GB of models download lazily on first `qmd embed`/`qmd query` to avoid blocking setup `(2026-03-05)`
 - **Day-folder grouping** — `session_to_md.py` creates `vault/YYYY-MM-DD/` subfolders per session date; callers pass only the base `VAULT_DIR`, date subfolder is created internally `(2026-03-05)`

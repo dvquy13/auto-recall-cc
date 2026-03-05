@@ -3,6 +3,6 @@
   "version": "0.2.0",
   "description": "Auto-export Claude Code sessions to a searchable markdown vault",
   "skills": [
-    "./skills/setup"
+    "./skills/auto-recall-cc"
   ]
 }

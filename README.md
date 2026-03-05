@@ -63,7 +63,7 @@ If you prefer not to use the marketplace plugin:
 ```bash
 git clone https://github.com/dvquy13/auto-recall-cc
 cd auto-recall-cc
-python3 plugin/scripts/merge_settings.py \
+python3 plugin/scripts/update_claude_settings.py \
   --hook-path $(pwd)/plugin/scripts/export_session.sh \
   --vault-dir ~/vault/sessions
 bun install -g @tobilu/qmd

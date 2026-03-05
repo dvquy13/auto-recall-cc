@@ -3,3 +3,5 @@
 - `CLAUDE_PLUGIN_ROOT` resolves to the `plugin/` directory when installed via marketplace
 - GitHub: https://github.com/dvquy13/auto-recall-cc
 - Release: `export GITHUB_TOKEN=$(gh auth token) && npm run release`
+
+Git commit MUST follow [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/#summary) standards.

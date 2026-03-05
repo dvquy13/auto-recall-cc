@@ -106,7 +106,7 @@ Here's what I'll do:
 Shall I proceed? (yes/no)
 ```
 
-Use `merge_settings.py --dry-run` to verify the settings changes internally if needed, but show only the plain-English version above to the user. Do not show internal key names.
+Use `update_claude_settings.py --dry-run` to verify the settings changes internally if needed, but show only the plain-English version above to the user. Do not show internal key names.
 
 Then use AskUserQuestion with options: "Yes, proceed" / "No, cancel".
 
@@ -124,7 +124,7 @@ If `INSTALL_MODE=existing` and the directory already exists from the clone, skip
 
 **Step 2** — Register hook + enable QMD search:
 ```bash
-python3 ${CLAUDE_PLUGIN_ROOT}/scripts/merge_settings.py \
+python3 ${CLAUDE_PLUGIN_ROOT}/scripts/update_claude_settings.py \
   --hook-path ${CLAUDE_PLUGIN_ROOT}/scripts/export_session.sh \
   --vault-dir {VAULT_DIR}
 ```
@@ -222,7 +222,7 @@ For full docs: https://github.com/dvq/auto-recall-cc#readme
 ## Error handling
 
 - If any step fails, show the exact error and stop. Do not silently swallow errors.
-- For `merge_settings.py` errors: show the JSON error field and tell the user to check `~/.claude/settings.json`.
+- For `update_claude_settings.py` errors: show the JSON error field and tell the user to check `~/.claude/settings.json`.
 - For `qmd collection add` errors: check if the collection already exists with `qmd status`; if so, continue.
 - For `git clone` errors: show the full error output and stop — do not proceed with a partial clone.
 - After any failure, tell the user which step failed and what to try next.
