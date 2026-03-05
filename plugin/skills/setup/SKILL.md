@@ -29,10 +29,11 @@ Then report findings conversationally (no bullet lists, just natural sentences):
 
 ## Phase 2: Gather preferences
 
-Ask one question:
+Use AskUserQuestion with two options:
+- `~/vault/sessions` (default)
+- "Other — I'll type a path"
 
-> Where should I store your exported sessions? (default: `~/vault/sessions`)
-> Press Enter to accept the default, or type a path.
+If the user picks "Other", follow up with another AskUserQuestion for the custom path (free-text).
 
 If `~/vault/` already exists (from recon), suggest `~/vault/sessions` as the default. Otherwise suggest `~/vault/sessions` anyway.
 
@@ -61,6 +62,8 @@ Shall I proceed? (yes/no)
 ```
 
 Use `merge_settings.py --dry-run` to verify the settings changes internally if needed, but show only the plain-English version above to the user. Do not show internal key names.
+
+Then use AskUserQuestion with options: "Yes, proceed" / "No, cancel".
 
 ---
 
@@ -102,7 +105,9 @@ If it errors with "already exists" or similar, treat as success.
 Ask each question separately:
 
 **Bulk import:**
-> I found {N} existing sessions. Want me to import them now? This will run in the foreground and may take a few minutes. (yes/no)
+
+Use AskUserQuestion: "I found {N} existing sessions. Want me to import them now? This will run in the foreground and may take a few minutes."
+Options: "Yes, import now" / "No, skip"
 
 If yes:
 ```bash
@@ -110,9 +115,11 @@ bash ${CLAUDE_PLUGIN_ROOT}/scripts/bulk_index.sh --vault-dir {VAULT_DIR}
 ```
 
 **Git sync:**
-> Want to back up your vault to a git remote? I can set that up now. (yes/no/skip)
 
-If yes, ask for the remote URL, then:
+Use AskUserQuestion: "Want to back up your vault to a git remote?"
+Options: "Yes, set it up" / "No, skip"
+
+If yes, use another AskUserQuestion to collect the remote URL (free-text). Then:
 ```bash
 cd $(dirname {VAULT_DIR})
 git init
