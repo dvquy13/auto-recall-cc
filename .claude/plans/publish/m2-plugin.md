@@ -158,7 +158,7 @@ Every time a Claude Code session ends, auto-recall-cc converts the raw JSONL
 transcript to clean markdown and indexes it with QMD for instant search.
 
 ## Quick start
-1. Install: `claude marketplace add dvq/auto-recall-cc`
+1. Install: `claude plugin marketplace add dvq/auto-recall-cc`
 2. Run: `/auto-recall-cc:setup` in any Claude Code session
 3. Done — future sessions auto-export on close
 

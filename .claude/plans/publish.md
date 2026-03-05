@@ -9,7 +9,7 @@ Goal: Ship as a Claude plugin with an onboarding wizard skill. Claude handles al
 
 ```
 1. User installs plugin:
-     claude marketplace add dvq/auto-recall-cc
+     claude plugin marketplace add dvq/auto-recall-cc
 
 2. User starts a new Claude Code session
 

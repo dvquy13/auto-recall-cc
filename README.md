@@ -9,8 +9,8 @@ transcript to clean markdown and indexes it with QMD for instant search.
 
 ## Quick start
 
-1. Add marketplace: `claude marketplace add dvquy13/auto-recall-cc`
-2. Install plugin: `claude plugin install auto-recall-cc`
+1. Add marketplace: `claude plugin marketplace add dvquy13/auto-recall-cc`
+2. Install plugin: `claude plugin install auto-recall-cc@auto-recall-cc`
 3. Run: `/auto-recall-cc:setup` in any Claude Code session
 4. Done — future sessions auto-export on close
 
