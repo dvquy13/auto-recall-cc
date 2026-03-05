@@ -10,8 +10,7 @@ Output filename: {date}_{project}_{session_id_short}.md
 """
 
 import argparse
-import json
-import os
+import hashlib
 import sys
 from pathlib import Path
 from typing import Optional
@@ -45,6 +44,20 @@ def _first_user_text(messages: list) -> str:
     return ""
 
 
+def _file_checksum(path: str) -> str:
+    return hashlib.md5(Path(path).read_bytes()).hexdigest()
+
+
+def _read_stored_checksum(out_path: Path) -> Optional[str]:
+    try:
+        for line in out_path.read_text(encoding="utf-8").split("\n"):
+            if line.startswith("source_checksum:"):
+                return line.split(":", 1)[1].strip()
+    except Exception:
+        pass
+    return None
+
+
 def _is_trivial(messages: list) -> bool:
     """Return True if the session has fewer than 2 real user messages."""
     user_count = sum(1 for m in messages if m["role"] == "user")
@@ -63,6 +76,7 @@ def render_markdown(parsed: dict) -> str:
     started_at = meta.get("started_at", "")
     ended_at = meta.get("ended_at", "")
     source_jsonl = meta.get("source_jsonl", "")
+    source_checksum = meta.get("source_checksum", "")
     version = meta.get("version", "")
     permission_mode = meta.get("permission_mode", "default")
     message_count = len(messages)
@@ -79,6 +93,8 @@ def render_markdown(parsed: dict) -> str:
     lines.append(f"started_at: {started_at}")
     lines.append(f"ended_at: {ended_at}")
     lines.append(f"source_jsonl: {source_jsonl}")
+    if source_checksum:
+        lines.append(f"source_checksum: {source_checksum}")
     lines.append(f"message_count: {message_count}")
     if version:
         lines.append(f"claude_version: {version}")
@@ -87,7 +103,6 @@ def render_markdown(parsed: dict) -> str:
     lines.append("")
 
     # --- Title ---
-    title_suffix = first_msg if first_msg else f"{project} — {date}"
     lines.append(f"# Session: {project} — {date}")
     lines.append("")
     if first_msg:
@@ -121,11 +136,19 @@ def output_filename(meta: dict) -> str:
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Convert Claude Code JSONL session to markdown")
+    parser = argparse.ArgumentParser(
+        description="Convert Claude Code JSONL session to markdown"
+    )
     parser.add_argument("--input", required=True, help="Path to session JSONL file")
-    parser.add_argument("--output", default=None, help="Output directory (default: stdout)")
-    parser.add_argument("--skip-trivial", action="store_true", default=True,
-                        help="Skip sessions with fewer than 2 user messages (default: true)")
+    parser.add_argument(
+        "--output", default=None, help="Output directory (default: stdout)"
+    )
+    parser.add_argument(
+        "--skip-trivial",
+        action="store_true",
+        default=True,
+        help="Skip sessions with fewer than 2 user messages (default: true)",
+    )
     parser.add_argument("--no-skip-trivial", action="store_false", dest="skip_trivial")
     args = parser.parse_args()
 
@@ -134,8 +157,14 @@ def main():
     meta = parsed["metadata"]
 
     if args.skip_trivial and _is_trivial(messages):
-        print(f"Skipping trivial session (< 2 user messages): {meta.get('session_id')}", file=sys.stderr)
+        print(
+            f"Skipping trivial session (< 2 user messages): {meta.get('session_id')}",
+            file=sys.stderr,
+        )
         sys.exit(0)
+
+    checksum = _file_checksum(args.input)
+    meta["source_checksum"] = checksum
 
     md = render_markdown(parsed)
 
@@ -146,9 +175,8 @@ def main():
         fname = output_filename(meta)
         out_path = out_dir / fname
 
-        # Skip if already exported (idempotent)
-        if out_path.exists():
-            print(f"Already exported: {out_path}", file=sys.stderr)
+        if out_path.exists() and _read_stored_checksum(out_path) == checksum:
+            print(f"Already exported (unchanged): {out_path}", file=sys.stderr)
             sys.exit(0)
 
         out_path.write_text(md, encoding="utf-8")
