@@ -75,8 +75,9 @@ else
 fi
 
 # Git sync (if vault is a git repo)
-if [[ -d "${HOME}/vault/.git" ]]; then
-  cd "${HOME}/vault"
+VAULT_GIT_ROOT="$(dirname "${VAULT_DIR}")"
+if [[ -d "${VAULT_GIT_ROOT}/.git" ]]; then
+  cd "${VAULT_GIT_ROOT}"
   git add sessions/ 2>/dev/null || true
   SESSION_DATE="$(date +%Y-%m-%d)"
   PROJECT="$(basename "$(dirname "$TRANSCRIPT_PATH")" | sed 's/-Users-dvq-frostmourne-//' | sed 's/-Users-dvq-//')"

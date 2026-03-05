@@ -11,6 +11,7 @@ Output filename: {date}_{project}_{session_id_short}.md
 
 import argparse
 import hashlib
+import socket
 import sys
 from pathlib import Path
 from typing import Optional
@@ -99,6 +100,7 @@ def render_markdown(parsed: dict) -> str:
     if version:
         lines.append(f"claude_version: {version}")
     lines.append(f"permission_mode: {permission_mode}")
+    lines.append(f"machine: {socket.gethostname()}")
     lines.append("---")
     lines.append("")
 

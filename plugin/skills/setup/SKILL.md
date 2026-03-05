@@ -14,6 +14,7 @@ command -v qmd && qmd --version 2>&1 || echo "QMD_MISSING"
 for cmd in bun npm npx; do command -v $cmd &>/dev/null && echo "installer=$cmd" && break; done 2>/dev/null || echo "installer=none"
 find ~/.claude/projects -maxdepth 4 -name '*.jsonl' 2>/dev/null | wc -l
 test -d ~/vault && echo "vault_exists=1" || echo "vault_exists=0"
+test -d ~/vault/.git && echo "vault_git=1" || echo "vault_git=0"
 ```
 
 Then report findings conversationally (no bullet lists, just natural sentences):
@@ -29,6 +30,16 @@ Then report findings conversationally (no bullet lists, just natural sentences):
 
 ## Phase 2: Gather preferences
 
+**First**, use AskUserQuestion to ask whether this is a fresh install or an existing vault:
+
+> "Is this a fresh install, or do you have an existing vault on another machine?"
+
+Options:
+- `"Fresh install — create a new vault"`
+- `"Existing vault — clone from git remote"`
+
+### If "Fresh install":
+
 Use AskUserQuestion with two options:
 - `~/vault/sessions` (default)
 - "Other — I'll type a path"
@@ -37,13 +48,32 @@ If the user picks "Other", follow up with another AskUserQuestion for the custom
 
 If `~/vault/` already exists (from recon), suggest `~/vault/sessions` as the default. Otherwise suggest `~/vault/sessions` anyway.
 
-Expand `~` to the full home path. Store as `VAULT_DIR`.
+Expand `~` to the full home path. Store as `VAULT_DIR`. Set `INSTALL_MODE=fresh`.
+
+### If "Existing vault":
+
+1. Use AskUserQuestion to ask for the git remote URL (free-text input):
+   > "What is the git remote URL for your vault?"
+
+2. Use AskUserQuestion to ask where to clone it locally:
+   > "Where should I clone the vault? (default: ~/vault)"
+   Options: `~/vault` / "Other — I'll type a path"
+
+   If "Other", follow up with AskUserQuestion for the custom path.
+
+3. Execute the clone:
+   ```bash
+   git clone {REMOTE_URL} {LOCAL_PATH}
+   ```
+   If this fails, show the error and stop.
+
+4. Set `VAULT_DIR={LOCAL_PATH}/sessions` and `INSTALL_MODE=existing`.
 
 ---
 
 ## Phase 3: Preview — show plan before acting
 
-Show this user-friendly plan (no internal key names like `extraKnownMarketplaces`):
+### Fresh install plan:
 
 ```
 Here's what I'll do:
@@ -61,6 +91,21 @@ Here's what I'll do:
 Shall I proceed? (yes/no)
 ```
 
+### Existing vault plan:
+
+```
+Here's what I'll do:
+
+  [1] Vault already cloned from remote — skip create
+  [2] Register auto-export hook (runs automatically when each session closes)
+  [3] Enable QMD search over your sessions
+  [4] {Install qmd CLI via {installer} | qmd already installed — skip}
+  [5] Register QMD collection "sessions" pointing to {VAULT_DIR}
+  [6] Re-index all existing sessions in QMD
+
+Shall I proceed? (yes/no)
+```
+
 Use `merge_settings.py --dry-run` to verify the settings changes internally if needed, but show only the plain-English version above to the user. Do not show internal key names.
 
 Then use AskUserQuestion with options: "Yes, proceed" / "No, cancel".
@@ -71,10 +116,11 @@ Then use AskUserQuestion with options: "Yes, proceed" / "No, cancel".
 
 Run each step, reporting progress:
 
-**Step 1** — Create vault directory:
+**Step 1** — Create vault directory (fresh install only; skip if `INSTALL_MODE=existing`):
 ```bash
 mkdir -p {VAULT_DIR}
 ```
+If `INSTALL_MODE=existing` and the directory already exists from the clone, skip this step and report "Vault directory already exists — skipping."
 
 **Step 2** — Register hook + enable QMD search:
 ```bash
@@ -102,7 +148,7 @@ If it errors with "already exists" or similar, treat as success.
 
 ## Phase 5: Post-setup options (conversational)
 
-Ask each question separately:
+### Fresh install path:
 
 **Bulk import:**
 
@@ -128,6 +174,24 @@ git add .
 git commit -m "initial vault"
 git push -u origin main
 ```
+
+### Existing vault path:
+
+**Index existing sessions:**
+
+Use AskUserQuestion: "Want me to index all your existing vault sessions into QMD now?"
+Options: "Yes, index now" / "No, skip"
+
+If yes:
+```bash
+qmd update --collection sessions
+nohup qmd embed >> {LOG_DIR}/embed.log 2>&1 &
+```
+
+Where `LOG_DIR` is the vault's `.auto-recall-logs` directory (e.g., `$(dirname {VAULT_DIR})/.auto-recall-logs`).
+
+(Skip the bulk import prompt — the vault already contains exported sessions.)
+(Skip the git sync setup — git remote is already configured from the clone.)
 
 ---
 
@@ -160,4 +224,5 @@ For full docs: https://github.com/dvq/auto-recall-cc#readme
 - If any step fails, show the exact error and stop. Do not silently swallow errors.
 - For `merge_settings.py` errors: show the JSON error field and tell the user to check `~/.claude/settings.json`.
 - For `qmd collection add` errors: check if the collection already exists with `qmd status`; if so, continue.
+- For `git clone` errors: show the full error output and stop — do not proceed with a partial clone.
 - After any failure, tell the user which step failed and what to try next.
