@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.1](https://github.com/dvquy13/auto-recall-cc/compare/v0.3.0...v0.3.1) (2026-03-06)
+
+
+### Bug Fixes
+
+* hook runs without zshrc loaded so may not find the path it needs ([903a1a6](https://github.com/dvquy13/auto-recall-cc/commit/903a1a6df36f8ead3ac7fd89eb9d550e8a596544))
+
 # [0.3.0](https://github.com/dvquy13/auto-recall-cc/compare/v0.2.0...v0.3.0) (2026-03-05)
 
 
