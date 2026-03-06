@@ -14,6 +14,10 @@ VAULT_DIR="${VAULT_DIR:-${HOME}/vault/sessions}"
 PYTHON="${PYTHON:-python3}"
 QMD="${QMD:-qmd}"
 
+# Hooks run with system PATH (no ~/.zshrc). Prepend common user bin dirs so
+# tools like qmd (installed via bun/cargo/local) are findable.
+export PATH="$HOME/.bun/bin:$HOME/.cargo/bin:$HOME/.local/bin:$PATH"
+
 # Read stdin into a variable
 HOOK_JSON="$(cat)"
 
